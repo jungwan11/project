@@ -1,95 +1,171 @@
 <!DOCTYPE html>
 <html>
+<head>
+<meta charset="utf-8">
+<!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame
+		Remove this if you use the .htaccess -->
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 
-	<body>
-		<div id="map_canvas" style="width:500px;height:500px;"></div>
+<title>soup taxi</title>
+<meta name="description" content="">
+<meta name="author" content="bit">
 
-		<form id = "userinfo" >
-			<input type = "text" id = "userlat" name = "userlat" />
-			<input type = "text" id = "userlng" name = "userlng" />
-			Ãâ¹ß: <input type = "text" id = "start" name = "start" />
-			des: <input type = "text" id = "end" name = "end" />
-			<button id = "reserv">reserv</button>
-		</form>
-		<script type="text/javascript" src="https://maps.google.com/maps/api/js?sensor=true"></script>
-		<script>
-			document.getElementById("reserv").addEventListener("click", function() {
-				event.preventDefault();
-				return false;
-			});
-			
-			function showinfo(position) {
-				console.log('showinfo');
-				document.getElementById("userlat").value = position.coords.latitude;
-				document.getElementById("userlng").value = position.coords.longitude;
+<meta name="viewport" content="width=device-width; initial-scale=1.0">
 
-				var latlng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-				//var marker_name = "test";
-				var marker_position = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-				var myOptions = {
-					zoom : 15,
-					center : latlng,
-					mapTypeId : google.maps.MapTypeId.ROADMAP,
-					zoomControl : true,
-					streetViewControl : false,
-					disableDoubleClickZoom : false,
-					draggable : true,
-					scrollwheel : true,
-					mapTypeControl : false,
-					scaleControl : true,
-					rotateControl : false,
-					panControl : false
-				};
+<!-- Replace favicon.ico & apple-touch-icon.png in the root of your domain and delete these references -->
+<link rel="shortcut icon"
+	href="/safeTaxi/src/main/webapp/resources/favicon.ico">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<script
+	src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script type="text/javascript"
+	src="https://maps.google.com/maps/api/js?sensor=true"></script>
+</head>
 
-				var image = 'favicon.ico';
-				//map display
-				var map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+<body>
+	
+	<div id="messages"></div>
+	
+	
+	<div id="map_canvas" style="width: 100%; height: 500px;"></div>
 
-				var markers = [{
-					position : new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
-					map : map,
-					title : 'user'
-				}, {
-					position : new google.maps.LatLng(position.coords.latitude, position.coords.longitude + 0.01),
-					map : map,
-					icon : image,
-					title : 'taxi1'
-				}, {
-					position : new google.maps.LatLng(position.coords.latitude - 0.01, position.coords.longitude),
-					map : map,
-					icon : image,
-					title : 'taxi2'
-				}, {
-					position : new google.maps.LatLng(position.coords.latitude, position.coords.longitude - 0.01),
-					map : map,
-					icon : image,
-					title : 'taxi3'
-				}, {
-					position : new google.maps.LatLng(position.coords.latitude + 0.01, position.coords.longitude),
-					map : map,
-					icon : image,
-					title : 'taxi4'
-				}];
+	<div id="condition">
+		í¡ì—°ì°¨ëŸ‰:<input type="checkbox" name="smoke" /> ì•„ ê¸°:<input
+			type="checkbox" name="baby" /> ì§ì´ë§ìŒ:<input type="checkbox"
+			name="pack" /> ì• ì™„ë™ë¬¼:<input type="checkbox" name="pet" /> ì—¬ì„±ê¸°ì‚¬:<input
+			type="checkbox" name="gender" /> ì¥ ì• :<input type="checkbox"
+			name="weak" />
+	</div>
 
-				for ( id = 0; id < markers.length; id++) {
-					new google.maps.Marker(markers[id]);
-				}
+	<form id="userinfo">
+		<input type="text" id="userlat" name="userlat" /> 
+		<input type="text" id="userlng" name="userlng" />
+		ì¶œë°œì§€: <input type="text" id="start" name="start" />
+		 ëª©ì ì§€: <input type="text" id="end" name="end" />
+		<select name="later">
+			<option value="0">ì§€ ê¸ˆ</option>
+			<option value="5">5ë¶„ í›„</option>
+			<option value="10">10ë¶„ í›„</option>
+			<option value="15">15ë¶„ í›„</option>
+			<option value="20">20ë¶„ í›„</option>
+		</select>
+		<button id="transmit">ì˜ˆì•½</button>
+	</form>
+	<button id="getlocation">current location</button>
+	<script src="http://192.168.0.24:4000/socket.io/socket.io.js"></script>
+	<script>
+		var messagesElement = document.getElementById('messages');
+		var lastMessageElement = null;
+		function addMessage(message) {
+			var newMessageElement = document.createElement('div');
+			var newMessageText = document.createTextNode(message);
+			newMessageElement.appendChild(newMessageText);
+			messagesElement.insertBefore(newMessageElement, lastMessageElement);
+			lastMessageElement = newMessageElement;
+		}
+		
+		var socket = io.connect('http://localhost:4000');
+		socket.on('serverMessage', function(content) {
+			addMessage(content);
+		});
+		socket.on('login', function() {
+			var username = prompt('What username would you like to use?');
+			socket.emit('login', username);
+		});
+		document.getElementById("condition").addEventListener("click", function(event) {
+			var target = event.target.name;
+	
+			console.log(target);
+		});
+		document.getElementById("transmit").addEventListener("click", function() {
+			event.preventDefault();
+			var msg = $('#userinfo').serialize();
+			socket.emit('clientMessage', msg);
+			console.log(serialize);
+			return false;
+		});
 
+		document.getElementById("getlocation").addEventListener("click", function() {
+			var geoconfig = {
+				enableHighAccuracy : true, //ì •í™•ë„ ë†’ì€ ìœ„ì¹˜ì •ë³´ë¥¼ ìš”êµ¬. ë‹¨, ê·¸ë§Œí¼ ëŠë ¤ì§„ë‹¤.
+				timeout : 10000, //ì œí•œ ì‹œê°„ ë‚´ì— ê°’ì„ ì—Šì§€ ëª»í•˜ë©´ TIMEOUTì—ëŸ¬ê°€ ë¦¬í„´.
+				maximumAge : 60000
+			//ìœ„ì¹˜ì •ë³´ì˜ ìœ íš¨ê¸°ê°„ì„ ì„¤ì •. ì´ì „ ìœ„ì¹˜ëŠ” ìºì‹œì— ì €ì¥ëœë‹¤. 
+			//ë¦¬ì†ŒìŠ¤ ì†Œë¹„ë¥¼ ì¤„ì´ê³  ë¹ ë¥¸ ì‘ë‹µì„ ìœ„í•´ ìƒˆë¡œìš´ ìœ„ì¹˜ë¥¼ ê²€ìƒ‰í•˜ëŠ” ëŒ€ì‹ ì— ì €ì¥ëœ ì •ë³´ë¥¼ ê°€ì ¸ì˜¤ëŠ” ë°©ì‹ì´  ë” ì í•©í•œ ê²½ìš°ì— ì‚¬ìš©.
+			};
+			control = navigator.geolocation.watchPosition(showinfo,	showerror, geoconfig);
+			console.log(control);
+		});
+
+		function showinfo(position) {
+			console.log("showinfo");
+			console.log(position);
+			var location = document.getElementById("location");
+
+			var lat = position.coords.latitude;
+			var lng = position.coords.longitude;
+			document.getElementById("userlat").value = lat;
+			document.getElementById("userlng").value = lng;
+
+			var latlng = new google.maps.LatLng(position.coords.latitude,
+					position.coords.longitude);
+			var marker_name = "test";
+			var marker_position = new google.maps.LatLng(
+					position.coords.latitude, position.coords.longitude);
+			var myOptions = {
+				zoom : 15,
+				center : latlng,
+				mapTypeId : google.maps.MapTypeId.ROADMAP,
+				zoomControl : true,
+				streetViewControl : false,
+				disableDoubleClickZoom : false,
+				draggable : true,
+				scrollwheel : true,
+				mapTypeControl : false,
+				scaleControl : true,
+				rotateControl : false,
+				panControl : false
+			};
+
+			var icon = 'images/taxi.png'; //íƒì‹œ ì´ë¯¸ì§€ë¡œ...
+			var map = new google.maps.Map(
+					document.getElementById("map_canvas"), myOptions);
+
+			var markers = [];
+			var position = function(position, map, title, icon) {
+				this.position = position;
+				this.map = map;
+				this.icon = icon;
+				this.title = title;
+			};
+
+			markers.push(new position(new google.maps.LatLng(lat, lng), map, 'user'));
+			markers.push(new position(new google.maps.LatLng(lat + 0.01, lng), map, 'taxi1', icon));
+			markers.push(new position(new google.maps.LatLng(lat, lng + 0.01), map, 'taxi2', icon));
+			markers.push(new position(new google.maps.LatLng(lat - 0.01, lng), map, 'taxi3', icon));
+			markers.push(new position(new google.maps.LatLng(lat, lng - 0.01), map, 'taxi3', icon));
+
+			console.log("markers" + markers);
+
+			for (id = 0; id < markers.length; id++) {
+				new google.maps.Marker(markers[id]);
 			}
-
-			function showerror(error) {
-				alert('error code: ' + error.code + ', error msg: ' + error.message);
-			}
-			
-			(function(){
-				var geoconfig = {
-					enableHighAccuracy : true, //Á¤È®µµ ³ôÀº À§Ä¡Á¤º¸¸¦ ¿ä±¸. ´Ü, ±×¸¸Å­ ´À·ÁÁø´Ù.
-					timeout : 10000, //Á¦ÇÑ ½Ã°£ ³»¿¡ °ªÀ» ¾üÁö ¸øÇÏ¸é TIMEOUT¿¡·¯°¡ ¸®ÅÏ.
-					maximumAge : 6000 //À§Ä¡Á¤º¸ÀÇ À¯È¿±â°£À» ¼³Á¤. ÀÌÀü À§Ä¡´Â Ä³½Ã¿¡ ÀúÀåµÈ´Ù.
-					//¸®¼Ò½º ¼Òºñ¸¦ ÁÙÀÌ°í ºü¸¥ ÀÀ´äÀ» À§ÇØ »õ·Î¿î À§Ä¡¸¦ °Ë»öÇÏ´Â ´ë½Å¿¡ ÀúÀåµÈ Á¤º¸¸¦ °¡Á®¿À´Â ¹æ½ÄÀÌ  ´õ ÀûÇÕÇÑ °æ¿ì¿¡ »ç¿ë.
-				};
-				navigator.geolocation.watchPosition(showinfo, showerror, geoconfig);
-			}());
-		</script>
-	</body>
+		}
+		function showerror(error) {
+			alert('Error: ' + error.code + ' ' + error.message);
+		}
+		(function() {
+			var geoconfig = {
+				enableHighAccuracy : true, //ì •í™•ë„ ë†’ì€ ìœ„ì¹˜ì •ë³´ë¥¼ ìš”êµ¬. ë‹¨, ê·¸ë§Œí¼ ëŠë ¤ì§„ë‹¤.
+				timeout : 10000, //ì œí•œ ì‹œê°„ ë‚´ì— ê°’ì„ ì—Šì§€ ëª»í•˜ë©´ TIMEOUTì—ëŸ¬ê°€ ë¦¬í„´.
+				maximumAge : 6000
+			//ìœ„ì¹˜ì •ë³´ì˜ ìœ íš¨ê¸°ê°„ì„ ì„¤ì •. ì´ì „ ìœ„ì¹˜ëŠ” ìºì‹œì— ì €ì¥ëœë‹¤.
+			//ë¦¬ì†ŒìŠ¤ ì†Œë¹„ë¥¼ ì¤„ì´ê³  ë¹ ë¥¸ ì‘ë‹µì„ ìœ„í•´ ìƒˆë¡œìš´ ìœ„ì¹˜ë¥¼ ê²€ìƒ‰í•˜ëŠ” ëŒ€ì‹ ì— ì €ì¥ëœ ì •ë³´ë¥¼ ê°€ì ¸ì˜¤ëŠ” ë°©ì‹ì´  ë” ì í•©í•œ ê²½ìš°ì— ì‚¬ìš©.
+			};
+			navigator.geolocation.watchPosition(showinfo, showerror, geoconfig);
+		}());
+	</script>
+</body>
 </html>
+
+

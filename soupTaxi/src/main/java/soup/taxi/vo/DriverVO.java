@@ -7,7 +7,7 @@ public class DriverVO {
 	private String drivername;
 	private String taxinumber;
 	private int cellnumber;
-	private int except;
+	private String except;
 	private boolean mov;
 	
 	public String getDriverid() {
@@ -40,13 +40,12 @@ public class DriverVO {
 	public void setCellnumber(int cellnumber) {
 		this.cellnumber = cellnumber;
 	}
-	public int getExcept() {
+	public String getExcept() {
 		return except;
 	}
-	public void setExcept(int except) {
+	public void setExcept(String except) {
 		this.except = except;
 	}
-	
 	public boolean isMov() {
 		return mov;
 	}
