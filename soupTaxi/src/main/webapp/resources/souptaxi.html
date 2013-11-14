@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+
+		<!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame
+		Remove this if you use the .htaccess -->
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+		<title>new_file4</title>
+		<meta name="description" content="">
+		<meta name="author" content="bit">
+
+		<meta name="viewport" content="width=device-width; initial-scale=1.0">
+
+		<!-- Replace favicon.ico & apple-touch-icon.png in the root of your domain and delete these references -->
+		<link rel="shortcut icon" href="/favicon.ico">
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>	
+		<script type="text/javascript" src="https://maps.google.com/maps/api/js?sensor=true"></script>
+	</head>
+
+	<body>
+		<div id = "location">
+			<button id = "getlocation"> test </button>	
+		</div>
+		<div id="map_canvas" style="width:500px;height:500px;"></div>
+		
+		<div id = "condition">
+			흡연차량:<input type = "checkbox" name = "smoke"/>
+			아    기:<input type = "checkbox" name = "baby"/>
+			짐이많음:<input type = "checkbox" name = "pack"/>
+			애완동물:<input type = "checkbox" name = "pet"/>
+			여성기사:<input type = "checkbox" name = "gender"/>
+			장    애:<input type = "checkbox" name = "weak"/>
+		</div>
+		
+		<form id = "userinfo" >
+			<input type = "hidden" id = "userlat" name = "userlat" />
+			<input type = "hidden" id = "userlng" name = "userlng" />
+			출발지: <input type = "text" id = "start" name = "start" />
+			목적지: <input type = "text" id = "end" name = "end" />
+			<select name = "later">
+				<option value = "0" >지  금</option>
+				<option value = "5" >5분 후 </option>
+				<option value = "10">10분 후</option>
+				<option value = "15">15분 후</option>
+				<option value = "20">20분 후</option>
+			</select>
+			<button id = "transmit">예약</button>
+		</form>
+
+		<script>
+			document.getElementById("condition").addEventListener("click", function(event){
+				var target = event.target.name;
+				console.log(target);
+			});
+			document.getElementById("transmit").addEventListener("click", function(){
+				 event.preventDefault();
+				 var serialize = $('#userinfo').serialize();
+				 console.log(serialize);
+				 return false;
+			});
+		
+			document.getElementById("getlocation").addEventListener("click", function(){
+				var geoconfig = {
+					enableHighAccuracy: true, //정확도 높은 위치정보를 요구. 단, 그만큼 느려진다.
+					timeout: 10000, 		  //제한 시간 내에 값을 엊지 못하면 TIMEOUT에러가 리턴.
+					maximumAge: 60000		  //위치정보의 유효기간을 설정. 이전 위치는 캐시에 저장된다. 
+											  //리소스 소비를 줄이고 빠른 응답을 위해 새로운 위치를 검색하는 대신에 저장된 정보를 가져오는 방식이  더 적합한 경우에 사용.
+				};
+				control = navigator.geolocation.watchPosition(showinfo, showerror, geoconfig);	
+				console.log(control);
+			});
+				
+			function showinfo(position){
+				var location = document.getElementById("location");
+				
+				var lat = position.coords.latitude;
+				var lng = position.coords.longitude;
+				document.getElementById("userlat").value = lat;
+				document.getElementById("userlng").value = lng;
+				
+				var latlng = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
+				var marker_name = "test";
+				var marker_position = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
+				var myOptions = {       
+					zoom: 15,       
+					center: latlng,       
+					mapTypeId: google.maps.MapTypeId.ROADMAP,
+					zoomControl : true,
+					streetViewControl : false,
+					disableDoubleClickZoom : false,
+					draggable  : true,
+					scrollwheel : true,
+					mapTypeControl : false,
+					scaleControl : true,
+					rotateControl : false,
+					panControl : false	
+				};  
+				
+				var icon = 'taxi.png'; //택시 이미지로...
+				var map = new google.maps.Map(document.getElementById("map_canvas"),myOptions); 
+				var infowindow = new google.maps.InfoWindow({ });
+				
+		        var user;
+		     	var taxis =[];
+				console.log("test"+lat+":"+lng);
+				user = new google.maps.Marker({
+                           position: marker_position,
+                           map: map
+                });
+      			google.maps.event.addListener(user,'click', function() {
+       				infowindow.setContent("map,marker");
+          			infowindow.open(map, user);
+              	});
+              	
+              	var test = function(lat, lng){
+              		this.lat = lat;
+              		this.lng = lng;
+              	};
+              	var tests = [];
+              	tests.push(new test(position.coords.latitude+0.01,position.coords.longitude));
+              	tests.push(new test(position.coords.latitude-0.01,position.coords.longitude));
+              	tests.push(new test(position.coords.latitude,position.coords.longitude-0.01));
+              	tests.push(new test(position.coords.latitude,position.coords.longitude+0.01));
+              	for(var i = 0; i < tests.length; i++){
+              		taxi = new google.maps.Marker({
+                           position: new google.maps.LatLng(tests[i].lat, tests[i].lng),
+                           map: map,
+                           icon: icon
+                	});
+                	taxis.push(taxi);
+              	}
+              	for(var i = 0; i < taxis.length; i++){
+              		addEvent(taxis[i], infowindow, map);
+              	}
+			}
+			function addEvent(taxis, infowindow, map){
+				google.maps.event.addListener(taxis, 'click', function(){
+              			infowindow.setContent("map,marker");
+	          			infowindow.open(map, taxis);
+              	});
+			}
+
+			function showerror(error){
+				alert('Error: ' + error.code + ' ' + error.message);
+			}
+		</script>
+	</body>
+</html>
