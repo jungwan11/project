@@ -1,178 +1,221 @@
 <!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+
+		<!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame
 		Remove this if you use the .htaccess -->
-<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 
-<title>soup taxi</title>
-<meta name="description" content="">
-<meta name="author" content="bit">
+		<title>new_file4</title>
+		<meta name="description" content="">
+		<meta name="author" content="bit">
 
-<meta name="viewport" content="width=device-width; initial-scale=1.0">
+		<meta name="viewport" content="width=device-width; initial-scale=1.0">
 
-<!-- Replace favicon.ico & apple-touch-icon.png in the root of your domain and delete these references -->
-<link rel="shortcut icon"
-	href="/safeTaxi/src/main/webapp/resources/favicon.ico">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<script 
-	src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-<script type="text/javascript"
-	src="https://maps.google.com/maps/api/js?sensor=true"></script>
-</head>
+		<!-- Replace favicon.ico & apple-touch-icon.png in the root of your domain and delete these references -->
+		<link rel="shortcut icon" href="/favicon.ico">
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>	
+		<script src="http://121.160.208.96:4000/socket.io/socket.io.js"></script> <!--socket io src download-->
+		<script type="text/javascript" src="https://maps.google.com/maps/api/js?sensor=true"></script>
+	</head>
+	<body>
+		<div id="map_canvas" style="width:500px;height:500px;"></div>
+		<div id = "condition">
+			흡연차량:<input type = "checkbox" name = "smoke"/>
+			아    기:<input type = "checkbox" name = "baby"/>
+			짐이많음:<input type = "checkbox" name = "pack"/>
+			애완동물:<input type = "checkbox" name = "pet"/>
+			여성기사:<input type = "checkbox" name = "gender"/>
+			장    애:<input type = "checkbox" name = "weak"/>
+		</div>
+		<form id = "userinfo" >
+			<input type = "hidden" id = "userlat" name = "userlat" />
+			<input type = "hidden" id = "userlng" name = "userlng" />
+			출발지: <input type = "text" id = "start" name = "start" />
+			목적지: <input type = "text" id = "end" name = "end" />
+			<select name = "later">
+				<option value = "0" >지  금</option>
+				<option value = "5" >5분 후 </option>
+				<option value = "10">10분 후</option>
+				<option value = "15">15분 후</option>
+				<option value = "20">20분 후</option>
+			</select>
+			<button id = "transmit">예약</button>
+		</form>
+			<input type = "hidden" id = "driverInfo" />
+		<script>
+			Date.prototype.yyyymmdd = function() { 
+        		var yyyy = this.getFullYear().toString();                                    
+       		   	var mm = (this.getMonth()+1).toString(); // getMonth() is zero-based         
+                var dd  = this.getDate().toString();          
+                	
+                return yyyy + '-' + (mm[1]?mm:"0"+mm[0]) + '-' + (dd[1]?dd:"0"+dd[0]);
+            };  
 
-<body>
-	
-	<div id="messages"></div>
-	
-	
-	<div id="map_canvas" style="width: 100%; height: 500px;"></div>
-
-	<div id="condition">
-		흡연차량:<input type="checkbox" name="smoke" /> 아 기:<input
-			type="checkbox" name="baby" /> 짐이많음:<input type="checkbox"
-			name="pack" /> 애완동물:<input type="checkbox" name="pet" /> 여성기사:<input
-			type="checkbox" name="gender" /> 장 애:<input type="checkbox"
-			name="weak" />
-	</div>
-
-	<form id="userinfo">
-		<input type="text" id="userlat" name="userlat" /> 
-		<input type="text" id="userlng" name="userlng" />
-		출발지: <input type="text" id="start" name="start" />
-		 목적지: <input type="text" id="end" name="end" />
-		<select name="later">
-			<option value="0">지 금</option>
-			<option value="5">5분 후</option>
-			<option value="10">10분 후</option>
-			<option value="15">15분 후</option>
-			<option value="20">20분 후</option>
-		</select>
-		<button id="transmit">예약</button>
-	</form>
-	<button id="getlocation">current location</button>
-	<script src="http://192.168.0.24:4000/socket.io/socket.io.js"></script>
-	<script>
-		var messagesElement = document.getElementById('messages');
-		var lastMessageElement = null;
-		function addMessage(message) {
-			var newMessageElement = document.createElement('div');
-			var newMessageText = document.createTextNode(message);
-			newMessageElement.appendChild(newMessageText);
-			messagesElement.insertBefore(newMessageElement, lastMessageElement);
-			lastMessageElement = newMessageElement;
-		}
-		
-		var socket = io.connect('http://localhost:4000');
-		socket.on('serverMessage', function(content) {
-			addMessage(content);
-		});
-		socket.on('login', function() {
-			var username = prompt('What username would you like to use?');
-			socket.emit('login', username);
-		});
-		document.getElementById("condition").addEventListener("click", function(event) {
-			var target = event.target.name;
-	
-			console.log(target);
-		});
-		document.getElementById("transmit").addEventListener("click", function() {
-			event.preventDefault();
-			var msg = $('#userinfo').serialize();
-			socket.emit('clientMessage', msg);
-			console.log(serialize);
-			return false;
-		});
-
-		document.getElementById("getlocation").addEventListener("click", function() {
-			/*
-			var geoconfig = {
-				enableHighAccuracy : true, //정확도 높은 위치정보를 요구. 단, 그만큼 느려진다.
-				timeout : 10000, //제한 시간 내에 값을 엊지 못하면 TIMEOUT에러가 리턴.
-				maximumAge : 60000
-			//위치정보의 유효기간을 설정. 이전 위치는 캐시에 저장된다. 
-			//리소스 소비를 줄이고 빠른 응답을 위해 새로운 위치를 검색하는 대신에 저장된 정보를 가져오는 방식이  더 적합한 경우에 사용.
-			};
-			control = navigator.geolocation.watchPosition(showinfo,	showerror, geoconfig);
-			console.log(control);
-			*/
-		});
-		var map;
-		var icon = 'images/taxi.png'; //택시 이미지로...
-		function initialize(){
-			var myOptions = {
-					zoom : 15,
-					center : new google.maps.LatLng(37.565773,126.977785),
-				    mapTypeId: google.maps.MapTypeId.ROADMAP,
-					zoomControl : true,
-					streetViewControl : false,
-					disableDoubleClickZoom : false,
-					draggable : true,
-					scrollwheel : true,
-					mapTypeControl : false,
-					scaleControl : true,
-					rotateControl : false,
-					panControl : false
-				};
-	
+			document.getElementById("condition").addEventListener("click", function(event){
+				var target = event.target.name;
 				
-				map = new google.maps.Map(
-						document.getElementById("map_canvas"), myOptions);
-		}
-		google.maps.event.addDomListener(window, 'load', initialize);
-		function showinfo(position) {
-			console.log("showinfo");
-			console.log(position);
-			var location = document.getElementById("location");
-
-			var lat = position.coords.latitude;
-			var lng = position.coords.longitude;
-			document.getElementById("userlat").value = lat;
-			document.getElementById("userlng").value = lng;
-
-			var latlng = new google.maps.LatLng(position.coords.latitude,
-					position.coords.longitude);
-			var marker_name = "test";
-			var marker_position = new google.maps.LatLng(
-					position.coords.latitude, position.coords.longitude);
-			
-
-			var markers = [];
-			var position = function(position, map, title, icon) {
-				this.position = position;
-				this.map = map;
-				this.icon = icon;
-				this.title = title;
-			};
-
-			markers.push(new position(new google.maps.LatLng(lat, lng), map, 'user'));
-			markers.push(new position(new google.maps.LatLng(lat + 0.01, lng), map, 'taxi1', icon));
-			markers.push(new position(new google.maps.LatLng(lat, lng + 0.01), map, 'taxi2', icon));
-			markers.push(new position(new google.maps.LatLng(lat - 0.01, lng), map, 'taxi3', icon));
-			markers.push(new position(new google.maps.LatLng(lat, lng - 0.01), map, 'taxi3', icon));
-
-			console.log("markers" + markers);
-
-			for (id = 0; id < markers.length; id++) {
-				new google.maps.Marker(markers[id]);
+				
+				
+				console.log(target);
+			});
+			$("div").delegate("button", "click", function() {
+  				var test = document.getElementById("driverInfo").value;
+				socket.emit('driverInfo', test);
+				console.log(test);
+			});
+			document.getElementById("transmit").addEventListener("click", function(){
+				 event.preventDefault();
+				 var serialize = $('#userinfo').serialize();
+				 var now = new Date();
+				 var str = document.getElementById('userlat').value;
+				 str = str + " " + document.getElementById('userlng').value;
+				 str = str + " " + now.yyyymmdd() +"|";
+				 console.log("str result : " + str);
+				 socket.emit('clientMessage', str);
+				 console.log(serialize);
+				 return false;
+			});
+//==================================send client location to server : start============================================================
+			var socket = io.connect('http://121.160.208.96:4000');
+		    socket.on('serverMessage', function(content) { // 기사정보 가져오기
+				console.log("socket.on : " + content);
+				var str = content.split("%");
+				taxiObjCreate(str);
+			});	 		
+			socket.on('login', function() {              // 승객과 승객의 아이디 입력
+				var username = prompt('What username would you like to use?');
+				var usertype = prompt('What is your usertype?');
+				console.log("username : " + username);
+				console.log("usertype : " + usertype);
+				socket.emit('login', username);
+				socket.emit('usertype', usertype);
+			});			
+//==================================send client location to server : end============================================================	
+			var taxiObj = function(driverid, drivername, taxinumber, cellnumber, except, lat, lng){
+					this.driverid = driverid;
+					this.driername = drivername;
+					this.taxinumber = taxinumber;
+					this.cellnumber = cellnumber;
+					this.except = except;
+              		this.lat = lat;
+              		this.lng = lng;
+            };
+            var taxiObjs = [];
+			function getTaxiObj(){
+				return taxiObjs;
 			}
-		}
-		function showerror(error) {
-			alert('Error: ' + error.code + ' ' + error.message);
-		}
-		(function() {
-			var geoconfig = {
-				enableHighAccuracy : true, //정확도 높은 위치정보를 요구. 단, 그만큼 느려진다.
-				timeout : 60000, //제한 시간 내에 값을 엊지 못하면 TIMEOUT에러가 리턴.
-				maximumAge : 0
-			//위치정보의 유효기간을 설정. 이전 위치는 캐시에 저장된다.
-			//리소스 소비를 줄이고 빠른 응답을 위해 새로운 위치를 검색하는 대신에 저장된 정보를 가져오는 방식이  더 적합한 경우에 사용.
-			};
-			navigator.geolocation.watchPosition(showinfo, showerror, geoconfig);
-		}());
-	</script>
-</body>
+			function clearTaxiObj(){
+				console.log("배열 개수:"+taxiObjs.length);
+				for(var i = 0; i < taxiObjs.length; i++){
+					taxiObjs.pop();
+				}
+			}
+			function taxiObjCreate(str){
+				clearTaxiObj();
+				for(var i = 0; i < str.length; i++){
+					console.log('taxi'+i+" "+str[i]);
+					var temp = [];
+					temp = str[i].split("|");
+					console.log("택시 개수"+i);
+					taxiObjs.push(new taxiObj(temp[0], temp[1], temp[2], temp[3], temp[4], temp[5], temp[6]));
+				}
+				var geoconfig = {
+					enableHighAccuracy: true, //정확도 높은 위치정보를 요구. 단, 그만큼 느려진다.
+					timeout: 1000000, 		  //제한 시간 내에 값을 엊지 못하면 TIMEOUT에러가 리턴.
+					maximumAge: 60000		  //위치정보의 유효기간을 설정. 이전 위치는 캐시에 저장된다. 
+											  //리소스 소비를 줄이고 빠른 응답을 위해 새로운 위치를 검색하는 대신에 저장된 정보를 가져오는 방식이  더 적합한 경우에 사용.
+				};
+				control = navigator.geolocation.watchPosition(showinfo, showerror, geoconfig);
+				// 0 : driverid, 1 : drivername, 2 : taxinumber, 3 : cellnumber, 4 : except, 5 : lat, 6 : lng
+			}
+			function initialize(lat, lng){
+				console.log("test");
+				var myOptions = {       
+						center: new google.maps.LatLng(lat, lng),
+				        zoom: 15,          
+						mapTypeId: google.maps.MapTypeId.ROADMAP,
+						zoomControl : true,
+						streetViewControl : false,
+						disableDoubleClickZoom : false,
+						draggable  : false,
+						scrollwheel : false,
+						mapTypeControl : false,
+						scaleControl : true,
+						rotateControl : false,
+						panControl : false	
+				};   
+				var map = new google.maps.Map(document.getElementById("map_canvas"),myOptions);
+				return map;
+			}
+			function showinfo(position){
+				console.log("map============== "+map);
+				var lat = position.coords.latitude;
+				var lng = position.coords.longitude;
+				document.getElementById("userlat").value = lat;
+				document.getElementById("userlng").value = lng;
+				
+				var map = initialize(lat, lng);
+				
+				var latlng = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
+				var marker_name = "test";
+				var marker_position = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
+				 
+				var infowindow = new google.maps.InfoWindow({ });
+				var icon = 'http://192.168.0.12:8020/souptaxi/img/taxi2.png'; 
+		        var user;
+				console.log("test"+lat+":"+lng);	
+				user = new google.maps.Marker({
+                           position: marker_position,
+                           map: map
+                });
+      			google.maps.event.addListener(user,'click', function() {
+       				infowindow.setContent("map,marker");
+          			infowindow.open(map, user);
+              	});
+              	var taxi;
+              	var taxis =[];
+              	var taxiObject = getTaxiObj();
+              	console.log(taxiObject);
+              	
+              	for(var i = 0; i < taxiObject.length; i++){
+              		console.log("위도"+taxiObject[i].lat);
+              		console.log("경도"+taxiObject[i].lng);
+              		taxi = new google.maps.Marker({
+                           position: new google.maps.LatLng(taxiObject[i].lat, taxiObject[i].lng),
+                           map: map,
+                           icon: icon
+                	});
+                	taxis.push(taxi);
+              	}
+              	for(var i = 0; i < taxis.length; i++){
+              		addEvent(taxis[i], infowindow, map, taxiObject[i]);
+              	}
+			}
+			
+			function addEvent(taxis, infowindow, map, taxiObject){
+				google.maps.event.addListener(taxis, 'click', function(){
+						
+						document.getElementById("driverInfo").value = taxiObject.driverid;
+						console.log(taxiObject);
+						var content = "";
+						content += "예약하시겠습니까?";
+						content += '<div">';
+						content += '<button>확인</button>';
+						content += '</div>';
+						
+              			infowindow.setContent(content);
+	          			infowindow.open(map, taxis);
+	          			
+						
+              	});
+			}
+
+			function showerror(error){
+				alert('Error: ' + error.code + ' ' + error.message);
+			}
+		</script>
+	</body>
 </html>
-
-
